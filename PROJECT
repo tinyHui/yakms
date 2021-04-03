@@ -1,3 +1,7 @@
 domain: yakms.io
 repo: github.com/tinyHui/yakms
+resources:
+- group: server
+  kind: MLServer
+  version: v1alpha1
 version: "2"
