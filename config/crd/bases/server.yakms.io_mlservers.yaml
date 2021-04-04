@@ -41,6 +41,11 @@ spec:
           properties:
             hello:
               type: string
+            port:
+              format: int32
+              maximum: 65353
+              minimum: 0
+              type: integer
             replicas:
               format: int32
               minimum: 0
@@ -49,6 +54,7 @@ spec:
               maxLength: 64
               type: string
           required:
+          - port
           - serverName
           type: object
         status:

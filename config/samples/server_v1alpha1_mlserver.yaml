@@ -4,4 +4,5 @@ metadata:
   name: mlserver-sample-2
 spec:
   serverName: example-server-1
+  port: 80
   replicas: 1

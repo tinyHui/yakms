@@ -58,8 +58,17 @@ func (r *MLServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	log = log.WithValues("deployment_name", mlServer.Spec.ServerName)
 
-	err := r.createDeploymentIfNotExist(ctx, log, mlServer, req)
-	return ctrl.Result{}, err
+	_, err := r.createServiceIfNotExist(ctx, log, mlServer, req)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	_, err = r.createDeploymentIfNotExist(ctx, log, mlServer, req)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
 }
 
 func (r *MLServerReconciler) SetupWithManager(mgr ctrl.Manager) error {

@@ -17,8 +17,44 @@ var (
 	apiGVStr = serverv1alpha1.GroupVersion.String()
 )
 
-func (r *MLServerReconciler) createDeploymentIfNotExist(ctx context.Context, log logr.Logger, mlServer serverv1alpha1.MLServer, req ctrl.Request) error {
-	// create deployment if not found
+func (r *MLServerReconciler) createServiceIfNotExist(ctx context.Context, log logr.Logger, mlServer serverv1alpha1.MLServer, req ctrl.Request) (bool, error) {
+	/**
+	Create service if not found
+
+	Return: created, error
+	*/
+	serviceSpec := corev1.Service{}
+	err := r.Get(ctx, client.ObjectKey{Namespace: mlServer.Namespace, Name: mlServer.Spec.ServerName}, &serviceSpec)
+	if apierrors.IsNotFound(err) {
+		log.Info(fmt.Sprintf("could not find existing service for %s, creating...", serverv1alpha1.KIND))
+
+		serviceSpec = constructServiceSpec(mlServer)
+		if err := r.Create(ctx, &serviceSpec); err != nil {
+			log.Error(err, fmt.Sprintf("unable to create Service for %s", serverv1alpha1.KIND))
+			return false, err
+		}
+
+		r.Recorder.Eventf(&mlServer, corev1.EventTypeNormal, "Created", "created service %q", serviceSpec.Name)
+		log.Info("service created")
+
+		return true, nil
+	}
+
+	if err != nil {
+		log.Error(err, fmt.Sprintf("failed to get Service for %q", serverv1alpha1.KIND))
+		return false, err
+	}
+
+	log.Info(fmt.Sprintf("service %q exist, skip", req.Name))
+	return false, nil
+}
+
+func (r *MLServerReconciler) createDeploymentIfNotExist(ctx context.Context, log logr.Logger, mlServer serverv1alpha1.MLServer, req ctrl.Request) (bool, error) {
+	/**
+	Create deployment if not found
+
+	Return: created, error
+	*/
 	deploymentSpec := appsv1.Deployment{}
 	err := r.Get(ctx, client.ObjectKey{Namespace: mlServer.Namespace, Name: mlServer.Spec.ServerName}, &deploymentSpec)
 	if apierrors.IsNotFound(err) {
@@ -27,21 +63,20 @@ func (r *MLServerReconciler) createDeploymentIfNotExist(ctx context.Context, log
 		deploymentSpec = constructDeploymentSpec(mlServer)
 		if err := r.Create(ctx, &deploymentSpec); err != nil {
 			log.Error(err, fmt.Sprintf("unable to create Deployment for %s", serverv1alpha1.KIND))
-			return nil
+			return false, err
 		}
 
 		r.Recorder.Eventf(&mlServer, corev1.EventTypeNormal, "Created", "created deployment %q", deploymentSpec.Name)
 		log.Info("deployment created")
 
-		return nil
+		return true, nil
 	}
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to get Deployment for %q", serverv1alpha1.KIND))
-		return err
+		return false, err
 	}
 
 	log.Info(fmt.Sprintf("deployment %q exist, skip", req.Name))
-
-	return nil
+	return false, nil
 }

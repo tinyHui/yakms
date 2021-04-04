@@ -8,8 +8,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	serverv1alpha1 "github.com/tinyHui/yakms/api/v1alpha1"
+)
+
+const (
+	containerPort = 8080
 )
 
 func constructJobSpec(server v1alpha1.MLServer) batchv1.Job {
@@ -26,6 +31,27 @@ func constructJobSpec(server v1alpha1.MLServer) batchv1.Job {
 					Containers:    []v1.Container{{Name: "ml-server", Image: "hello-world"}},
 					RestartPolicy: v1.RestartPolicyOnFailure,
 				},
+			},
+		},
+	}
+}
+
+func constructServiceSpec(server v1alpha1.MLServer) corev1.Service {
+	return corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            server.Spec.ServerName,
+			Namespace:       server.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(&server, serverv1alpha1.GroupVersion.WithKind(serverv1alpha1.KIND))},
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeLoadBalancer,
+			Ports: []corev1.ServicePort{{
+				Protocol:   corev1.ProtocolTCP,
+				Port:       server.Spec.Port,
+				TargetPort: intstr.FromInt(containerPort),
+			}},
+			Selector: map[string]string{
+				"app": server.Spec.ServerName,
 			},
 		},
 	}
@@ -63,7 +89,7 @@ func constructDeploymentSpec(server v1alpha1.MLServer) appsv1.Deployment {
 							Name:  "hello-world-nginx",
 							Image: "paulbouwer/hello-kubernetes:1.9",
 							Ports: []v1.ContainerPort{{
-								ContainerPort: 8080,
+								ContainerPort: containerPort,
 							}},
 						},
 					},
