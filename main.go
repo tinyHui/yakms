@@ -18,7 +18,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -67,17 +69,18 @@ func main() {
 	}
 
 	if err = (&controllers.MLServerReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("MLServer"),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName(serverv1alpha1.KIND),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor(fmt.Sprintf("%s-controllers", strings.ToLower(serverv1alpha1.KIND))),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MLServer")
+		setupLog.Error(err, "unable to create controller", "controller", serverv1alpha1.KIND)
 		os.Exit(1)
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&serverv1alpha1.MLServer{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "MLServer")
+			setupLog.Error(err, "unable to create webhook", "webhook", serverv1alpha1.KIND)
 			os.Exit(1)
 		}
 	}

@@ -24,9 +24,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
+const (
+	GROUP   = "server.yakms.io"
+	VERSION = "v1alpha1"
+	KIND    = "MLServer"
+)
+
 var (
+	GroupKind = schema.GroupKind{Group: GROUP, Kind: KIND}
+
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "server.yakms.io", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: GROUP, Version: VERSION}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}

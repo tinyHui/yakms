@@ -20,16 +20,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // MLServerSpec defines the desired state of MLServer
 type MLServerSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of MLServer. Edit MLServer_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:validation:MaxLength=64
+	ServerName string `json:"serverName"`
+
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	Replicas int32 `json:"replicas"`
+
+	HelloWorld string `json:"hello,omitempty"`
 }
 
 // MLServerStatus defines the observed state of MLServer
@@ -41,6 +45,7 @@ type MLServerStatus struct {
 // +kubebuilder:object:root=true
 
 // MLServer is the Schema for the mlservers API
+// +kubebuilder:printcolumn:name="Replicas",type=integer,JSONPath=`.spec.replicas`
 type MLServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

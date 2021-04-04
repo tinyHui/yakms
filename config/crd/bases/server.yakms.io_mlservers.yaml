@@ -8,6 +8,10 @@ metadata:
   creationTimestamp: null
   name: mlservers.server.yakms.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.replicas
+    name: Replicas
+    type: integer
   group: server.yakms.io
   names:
     kind: MLServer
@@ -15,6 +19,7 @@ spec:
     plural: mlservers
     singular: mlserver
   scope: Namespaced
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: MLServer is the Schema for the mlservers API
@@ -34,10 +39,17 @@ spec:
         spec:
           description: MLServerSpec defines the desired state of MLServer
           properties:
-            foo:
-              description: Foo is an example field of MLServer. Edit MLServer_types.go
-                to remove/update
+            hello:
               type: string
+            replicas:
+              format: int32
+              minimum: 0
+              type: integer
+            serverName:
+              maxLength: 64
+              type: string
+          required:
+          - serverName
           type: object
         status:
           description: MLServerStatus defines the observed state of MLServer
