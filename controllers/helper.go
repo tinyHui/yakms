@@ -62,6 +62,9 @@ func (r *MLServerReconciler) createDeploymentIfNotExist(ctx context.Context, log
 
 		deploymentSpec = constructDeploymentSpec(mlServer)
 		if err := r.Create(ctx, &deploymentSpec); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				return false, nil
+			}
 			log.Error(err, fmt.Sprintf("unable to create Deployment for %s", serverv1alpha1.KIND))
 			return false, err
 		}

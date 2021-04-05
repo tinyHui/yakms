@@ -18,14 +18,17 @@ package controllers
 
 import (
 	"context"
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
-
+	"fmt"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	serverv1alpha1 "github.com/tinyHui/yakms/api/v1alpha1"
 )
@@ -35,6 +38,7 @@ type MLServerReconciler struct {
 	client.Client
 	Log logr.Logger
 
+	Context  context.Context
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
 }
@@ -43,17 +47,21 @@ type MLServerReconciler struct {
 // +kubebuilder:rbac:groups=server.yakms.io,resources=mlservers/status,verbs=get;update;patch
 
 func (r *MLServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
-	log := r.Log.WithValues("mlserver", req.NamespacedName)
+	ctx := r.Context
+	log := r.Log.WithValues(serverv1alpha1.KIND, req.NamespacedName)
 	c := r.Client
 
 	var mlServer serverv1alpha1.MLServer
 	if err := c.Get(ctx, req.NamespacedName, &mlServer); err != nil {
-		log.Error(err, "unable to fetch MLServers")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			log.Info(fmt.Sprintf("%s is not found, skip", serverv1alpha1.KIND))
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+		log.Error(err, "unable to fetch MLServers")
+		return ctrl.Result{}, err
 	}
 
 	log = log.WithValues("deployment_name", mlServer.Spec.ServerName)
@@ -89,6 +97,10 @@ func (r *MLServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&serverv1alpha1.MLServer{}).
+		WithEventFilter(predicate.Funcs{
+			DeleteFunc: r.deleteEventFilter(r.Context, r.Log),
+		}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
 		Complete(r)
 }

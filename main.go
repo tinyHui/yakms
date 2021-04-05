@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -71,6 +72,7 @@ func main() {
 	if err = (&controllers.MLServerReconciler{
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName(serverv1alpha1.KIND),
+		Context:  context.Background(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor(fmt.Sprintf("%s-controllers", strings.ToLower(serverv1alpha1.KIND))),
 	}).SetupWithManager(mgr); err != nil {
