@@ -28,6 +28,7 @@ type MLServerSpec struct {
 
 	// +kubebuilder:validation:MaxLength=64
 	ServerName string `json:"serverName"`
+
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=65353
 	Port int32 `json:"port"`
@@ -35,8 +36,6 @@ type MLServerSpec struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	Replicas int32 `json:"replicas"`
-
-	HelloWorld string `json:"hello,omitempty"`
 }
 
 // MLServerStatus defines the observed state of MLServer
