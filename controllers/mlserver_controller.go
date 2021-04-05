@@ -85,6 +85,11 @@ func (r *MLServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	err = r.scaleUpDeployment(ctx, log, mlServer, mlServer.Spec.Replicas)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 

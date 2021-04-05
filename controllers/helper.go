@@ -83,3 +83,29 @@ func (r *MLServerReconciler) createDeploymentIfNotExist(ctx context.Context, log
 	log.Info(fmt.Sprintf("deployment %q exist, skip", req.Name))
 	return false, nil
 }
+
+func (r *MLServerReconciler) scaleUpDeployment(ctx context.Context, log logr.Logger, mlServer serverv1alpha1.MLServer, expectReplicas int32) error {
+	/**
+	Scale deployment to expect if not match
+
+	Return: error
+	*/
+	deploymentSpec := appsv1.Deployment{}
+	if err := r.Get(ctx, client.ObjectKey{Namespace: mlServer.Namespace, Name: mlServer.Spec.ServerName}, &deploymentSpec); err != nil {
+		log.Error(err, fmt.Sprintf("failed to get Deployment for %q", serverv1alpha1.KIND))
+		return err
+	}
+
+	if *deploymentSpec.Spec.Replicas == expectReplicas {
+		return nil
+	}
+
+	deploymentSpec.Spec.Replicas = &expectReplicas
+	if err := r.Update(ctx, &deploymentSpec); err != nil {
+		log.Error(err, "failed to Deployment update replica count")
+		return err
+	}
+
+	r.Recorder.Eventf(&deploymentSpec, corev1.EventTypeNormal, "Scaled", "Scaled deployment %q to %d replicas", deploymentSpec.Name, expectReplicas)
+	return nil
+}

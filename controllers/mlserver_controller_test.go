@@ -73,7 +73,7 @@ var _ = Describe("MLServer controller", func() {
 		})
 
 		It("should create new MLServer creates Service and Deployment", func() {
-			mlserver := &serverv1alpha1.MLServer{
+			mlServerConfig := &serverv1alpha1.MLServer{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: serverv1alpha1.GroupVersion.String(),
 					Kind:       serverv1alpha1.KIND,
@@ -88,7 +88,7 @@ var _ = Describe("MLServer controller", func() {
 					Replicas:   int32(1),
 				},
 			}
-			Expect(k8sClient.Create(ctx, mlserver)).NotTo(HaveOccurred(), "failed to create MLServer resource")
+			Expect(k8sClient.Create(ctx, mlServerConfig)).NotTo(HaveOccurred(), "failed to create MLServer resource")
 
 			// check service created
 			service := &corev1.Service{}
@@ -112,7 +112,7 @@ var _ = Describe("MLServer controller", func() {
 		})
 
 		It("should create new MLServer with spec and 3 replica if 3 is provided", func() {
-			mlserver := serverv1alpha1.MLServer{
+			mlServerConfig := serverv1alpha1.MLServer{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: serverv1alpha1.GroupVersion.String(),
 					Kind:       serverv1alpha1.KIND,
@@ -127,7 +127,7 @@ var _ = Describe("MLServer controller", func() {
 					Replicas:   int32(3),
 				},
 			}
-			Expect(k8sClient.Create(ctx, &mlserver)).NotTo(HaveOccurred(), "failed to create MLServer resource")
+			Expect(k8sClient.Create(ctx, &mlServerConfig)).NotTo(HaveOccurred(), "failed to create MLServer resource")
 
 			// wait the resources starts
 			deployment := &appsv1.Deployment{}
@@ -151,7 +151,7 @@ var _ = Describe("MLServer controller", func() {
 		})
 
 		It("should create new MLServer with spec and 1 replica if none is provided", func() {
-			mlserver := &serverv1alpha1.MLServer{
+			mlServerConfig := &serverv1alpha1.MLServer{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: serverv1alpha1.GroupVersion.String(),
 					Kind:       serverv1alpha1.KIND,
@@ -165,7 +165,7 @@ var _ = Describe("MLServer controller", func() {
 					Port:       port,
 				},
 			}
-			Expect(k8sClient.Create(ctx, mlserver)).NotTo(HaveOccurred(), "failed to create MLServer resource")
+			Expect(k8sClient.Create(ctx, mlServerConfig)).NotTo(HaveOccurred(), "failed to create MLServer resource")
 
 			// wait the resources starts
 			deployment := &appsv1.Deployment{}
@@ -184,5 +184,55 @@ var _ = Describe("MLServer controller", func() {
 			Expect(mlServer.Spec.Replicas).Should(Equal(int32(1)))
 		})
 
+		It("should allow updating the replicas count after creating MLServer", func() {
+			mlServerConfig := &serverv1alpha1.MLServer{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: serverv1alpha1.GroupVersion.String(),
+					Kind:       serverv1alpha1.KIND,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      dummyName,
+					Namespace: ns.Name,
+				},
+				Spec: serverv1alpha1.MLServerSpec{
+					ServerName: dummyServerName,
+					Port:       port,
+					Replicas:   int32(1),
+				},
+			}
+			Expect(k8sClient.Create(ctx, mlServerConfig)).NotTo(HaveOccurred(), "failed to create MLServer resource")
+
+			// wait the resources starts
+			deployment := &appsv1.Deployment{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, types.NamespacedName{Name: dummyServerName, Namespace: ns.Name}, deployment)
+			}, timeout, interval).Should(BeNil())
+			Expect(deployment.Spec).ShouldNot(BeNil())
+
+			// wait the resources starts
+			service := &corev1.Service{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, types.NamespacedName{Name: dummyServerName, Namespace: ns.Name}, service)
+			}, timeout, interval).Should(BeNil())
+			Expect(service.Spec).ShouldNot(BeNil())
+
+			// check MLServer
+			mlServer := &serverv1alpha1.MLServer{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, *lookupKey, mlServer)
+			}, timeout, interval).Should(BeNil())
+			Expect(mlServer.Spec.Replicas).Should(Equal(int32(1)))
+
+			mlServerConfig.Spec.Replicas = int32(3)
+			err := k8sClient.Update(ctx, mlServerConfig)
+			Expect(err).NotTo(HaveOccurred(), "failed to update MLServer")
+
+			Eventually(func() int32 {
+				newDeployment := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: dummyServerName, Namespace: ns.Name}, newDeployment)
+				Expect(err).NotTo(HaveOccurred(), "failed to get Deployment resource")
+				return *newDeployment.Spec.Replicas
+			}).Should(Equal(int32(3)), "expected Deployment resource to be scaled")
+		})
 	})
 })
