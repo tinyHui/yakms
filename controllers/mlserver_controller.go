@@ -66,6 +66,15 @@ func (r *MLServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	log = log.WithValues("deployment_name", mlServer.Spec.ServerName)
 
+	// if replica is 0 we set to 1
+	if mlServer.Spec.Replicas == 0 {
+		mlServer.Spec.Replicas = 1
+		if err := c.Update(ctx, &mlServer); err != nil {
+			log.Error(err, fmt.Sprintf("failed to update %s replica count", serverv1alpha1.KIND))
+			return ctrl.Result{}, err
+		}
+	}
+
 	_, err := r.createServiceIfNotExist(ctx, log, mlServer, req)
 	if err != nil {
 		return ctrl.Result{}, err
