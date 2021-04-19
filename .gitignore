@@ -21,3 +21,9 @@ README.md
 
 # IDE
 .idea/
+
+# Python
+example_models/env
+example_models/MNIST_data
+example_models/checkpoints
+example_models/.ipynb_checkpoints
